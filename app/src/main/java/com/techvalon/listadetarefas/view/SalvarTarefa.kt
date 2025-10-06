@@ -2,6 +2,7 @@ package com.techvalon.listadetarefas.view
 
 import android.R
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,9 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -34,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.techvalon.listadetarefas.components.Button
 import com.techvalon.listadetarefas.components.InputText
+import com.techvalon.listadetarefas.constantes.Constantes
+import com.techvalon.listadetarefas.repository.TarefaRepository
 import com.techvalon.listadetarefas.ui.theme.Purple500
 import com.techvalon.listadetarefas.ui.theme.Purple700
 import com.techvalon.listadetarefas.ui.theme.RADIO_BUTTON_GREEN_DISABLED
@@ -43,16 +48,24 @@ import com.techvalon.listadetarefas.ui.theme.RADIO_BUTTON_RED_SELECTED
 import com.techvalon.listadetarefas.ui.theme.RADIO_BUTTON_YELLOW_DISABLED
 import com.techvalon.listadetarefas.ui.theme.RADIO_BUTTON_YELLOW_SELECTED
 import com.techvalon.listadetarefas.ui.theme.White
+import com.techvalon.listadetarefas.ui.theme.shapePrioridade
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalvarTarefa (navController: NavController) {
 
+    var scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val tarefasRepositorio = TarefaRepository();
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var semPrioridade by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
 
     var prioridadeBaixa by remember {
@@ -157,7 +170,34 @@ fun SalvarTarefa (navController: NavController) {
             }
 
             Button(
-                onClick = {},
+                onClick = {
+                    var mensagem: Boolean = true
+                    
+                    scope.launch(Dispatchers.IO) {
+                        if (title.isEmpty()) {
+                            mensagem = false
+                        } else if (prioridadeBaixa || semPrioridade || prioridadeMedia || prioridadeAlta) {
+
+                            var prioridadeSelecionada: Int = Constantes.SEM_PRIORIDADE
+                            if (prioridadeBaixa) prioridadeSelecionada = Constantes.PRIORIDADE_BAIXA
+                            else if (prioridadeMedia) prioridadeSelecionada = Constantes.PRIORIDADE_MEDIA
+                            else if (prioridadeAlta) prioridadeSelecionada = Constantes.PRIORIDADE_ALTA
+
+                            tarefasRepositorio.salvarTarefa(title, description, prioridadeSelecionada)
+                            mensagem = true
+                        } else {
+                            mensagem = false
+                        }
+                    }
+
+                        if (mensagem) {
+                            Toast.makeText(context, "Sucesso ao salvar a tarefa", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        } else {
+                            Toast.makeText(context, "O titulo da tarefa é obrigatório", Toast.LENGTH_SHORT).show()
+                        }
+
+                },
                 modifier = Modifier.fillMaxWidth().height(80.dp).padding(20.dp),
                 texto = "Salvar"
             )
